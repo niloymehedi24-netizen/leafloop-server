@@ -1,24 +1,29 @@
 import { Express } from "express";
 import { Collection } from "mongodb";
-
 import bcrypt from "bcryptjs";
 import validator from "validator";
+import { createToken } from "./auth";
+
+import { Plant, User } from "./types";
 
 export default function registerRoutes(
   app: Express,
-  usersCollection: Collection,
-  plantsCollection: Collection
+  usersCollection: Collection<User>,
+  plantsCollection: Collection<Plant>
 ) {
-  // Root endpoint
+  // Root Endpoint
   app.get("/", (req, res) => {
     res.send("🌿 LeafLoop API Running");
   });
 
-  // User registration endpoint
+  // ==========================
+  // User Registration
+  // ==========================
   app.post("/api/register", async (req, res) => {
     try {
       const { name, email, password } = req.body;
 
+      // Validation
       if (!name || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -40,6 +45,7 @@ export default function registerRoutes(
         });
       }
 
+      // Check existing user
       const existingUser = await usersCollection.findOne({ email });
 
       if (existingUser) {
@@ -49,28 +55,98 @@ export default function registerRoutes(
         });
       }
 
+      // Hash Password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const result = await usersCollection.insertOne({
+      // User Object
+      const newUser: User = {
         name,
         email,
         password: hashedPassword,
         createdAt: new Date(),
-      });
+      };
 
+      // Save User
+      const result = await usersCollection.insertOne(newUser);
+
+      // Success Response
       res.status(201).json({
         success: true,
         message: "Registration successful",
-        insertedId: result.insertedId,
+        data: {
+          insertedId: result.insertedId,
+        },
       });
-
     } catch (error) {
       console.error(error);
 
       res.status(500).json({
         success: false,
-        message: "Something went wrong",
+        message: "Internal Server Error",
       });
     }
   });
+
+  // ==========================
+// User Login
+// ==========================
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required.",
+      });
+    }
+
+    // Find user
+    const user = await usersCollection.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
+      });
+    }
+
+    // Compare password
+    const isPasswordMatched = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!isPasswordMatched) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password.",
+      });
+    }
+
+    // Create JWT
+    const token = createToken({
+      email: user.email,
+    });
+
+    // Success Response
+    res.status(200).json({
+      success: true,
+      message: "Login successful.",
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+});
 }

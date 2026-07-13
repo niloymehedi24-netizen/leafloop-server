@@ -1,5 +1,13 @@
 import { ObjectId } from "mongodb";
 
+export interface User {
+  _id?: ObjectId;
+  name: string;
+  email: string;
+  password: string;
+  createdAt: Date;
+}
+
 export interface Plant {
   _id?: ObjectId;
   title: string;
@@ -11,13 +19,5 @@ export interface Plant {
   stock: number;
   sellerEmail: string;
   sellerName: string;
-  createdAt: Date;
-}
-
-export interface User {
-  _id?: ObjectId;
-  name: string;
-  email: string;
-  password: string;
   createdAt: Date;
 }
