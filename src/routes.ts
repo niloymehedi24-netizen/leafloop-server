@@ -239,15 +239,21 @@ export default function registerRoutes(
   });
 
   // ==========================
-  // Get All Plants
+  // Get All Plants (With Pagination)
   // ==========================
   app.get("/api/plants", async (req, res) => {
     try {
-      const { search = "", category = "", sort = "" } = req.query;
+      const {
+        search = "",
+        category = "",
+        sort = "",
+        page = "1",
+        limit = "6",
+      } = req.query;
 
       const query: Record<string, unknown> = {};
 
-      // Search
+      // Search Filter
       if (typeof search === "string" && search.trim()) {
         query.title = {
           $regex: search,
@@ -255,13 +261,13 @@ export default function registerRoutes(
         };
       }
 
-      // Category
+      // Category Filter
       if (typeof category === "string" && category) {
         query.category = category;
       }
 
+      // Sorting Option
       let sortOption = {};
-
       if (sort === "low") {
         sortOption = { price: 1 };
       } else if (sort === "high") {
@@ -270,20 +276,38 @@ export default function registerRoutes(
         sortOption = { createdAt: -1 };
       }
 
-      // 1. Fetch data from MongoDB
+      // Pagination Logic
+      const currentPage = Math.max(1, parseInt(page as string, 10) || 1);
+      const itemsPerPage = Math.max(1, parseInt(limit as string, 10) || 6);
+      const skip = (currentPage - 1) * itemsPerPage;
+
+      // Get the total matching count for UI calculations
+      const totalPlantsCount = await plantsCollection.countDocuments(query);
+      const totalPages = Math.ceil(totalPlantsCount / itemsPerPage);
+
+      // Fetch the specific page subset
       const plants = await plantsCollection
         .find(query)
         .sort(sortOption)
+        .skip(skip)
+        .limit(itemsPerPage)
         .toArray();
 
-      // 2. FIX: Send the plants data back to the client!
+      // Send paginated payload
       return res.status(200).json({
         success: true,
-        data: plants,
+        data: {
+          plants,
+          pagination: {
+            totalItems: totalPlantsCount,
+            totalPages,
+            currentPage,
+            itemsPerPage,
+          },
+        },
       });
     } catch (error) {
       console.error(error);
-
       res.status(500).json({
         success: false,
         message: "Internal Server Error",
