@@ -3,6 +3,7 @@ import { Collection } from "mongodb";
 import bcrypt from "bcryptjs";
 import validator from "validator";
 import { createToken } from "./auth";
+import { verifyJWT, AuthRequest } from "./middleware";
 
 import { Plant, User } from "./types";
 
@@ -149,4 +150,66 @@ app.post("/api/login", async (req, res) => {
     });
   }
 });
+
+// ==========================
+// Add Plant
+// ==========================
+app.post("/api/plants",verifyJWT, async (req: AuthRequest, res) => {
+    try {
+      const {
+        title,
+        category,
+        price,
+        image,
+        description,
+        careLevel,
+        stock,
+        sellerName,
+      } = req.body;
+
+      if (
+        !title?.trim() ||
+        !category?.trim() ||
+        price === undefined ||
+        stock === undefined ||
+        !image?.trim() ||
+        !description?.trim() ||
+        !careLevel
+    ) {
+        return res.status(400).json({
+          success: false,
+          message: "Please fill in all required fields.",
+        });
+      }
+
+      const newPlant: Plant = {
+        title,
+        category,
+        price: Number(price),
+        image,
+        description,
+        careLevel,
+        stock: Number(stock),
+        sellerEmail: req.user!.email,
+        sellerName,
+        createdAt: new Date(),
+      };
+
+      const result = await plantsCollection.insertOne(newPlant);
+
+      res.status(201).json({
+        success: true,
+        message: "Plant added successfully.",
+        insertedId: result.insertedId,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+);
 }
