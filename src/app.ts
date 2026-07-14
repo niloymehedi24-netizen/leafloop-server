@@ -3,7 +3,13 @@ import cors from "cors";
 
 const app = express();
 
-app.use(cors({ origin: "*" }));
+app.use(
+  cors({
+    origin: ["https://leafloop.vercel.app"], // <-- PUT YOUR REAL VERCEL URL HERE
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 app.get("/", (req, res) => {
