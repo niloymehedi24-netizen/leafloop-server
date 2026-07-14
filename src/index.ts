@@ -1,32 +1,23 @@
-import "dotenv/config";
-import app from "./app";
 import client from "./db";
+import app from "./app";
 import registerRoutes from "./routes";
-import { User, Plant } from "./types";
+import { Plant, User } from "./types";
 
-const PORT = process.env.PORT || 8000;
+let initialized = false;
 
-async function startServer() {
-  try {
-    await client.connect();
+export async function initializeApp() {
+  if (initialized) return app;
 
-    await client.db("admin").command({ ping: 1 });
+  await client.connect();
 
-    console.log("✅ MongoDB Connected");
+  const db = client.db("leafloopDB");
 
-    const db = client.db("leafloopDB");
+  const usersCollection = db.collection<User>("users");
+  const plantsCollection = db.collection<Plant>("plants");
 
-    const usersCollection = db.collection<User>("users");
-    const plantsCollection = db.collection<Plant>("plants");
+  registerRoutes(app, usersCollection, plantsCollection);
 
-    registerRoutes(app, usersCollection, plantsCollection);
+  initialized = true;
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error("❌ Failed to start server:", error);
-  }
+  return app;
 }
-
-startServer();
