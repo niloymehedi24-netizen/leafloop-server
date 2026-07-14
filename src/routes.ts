@@ -15,12 +15,11 @@ export default function registerRoutes(
 ) {
   // Root Endpoint
   app.get("/", (req, res) => {
-    res.send("🌿 LeafLoop API Running");
+    res.send("LeafLoop API Running");
   });
 
-  // ==========================
   // User Registration
-  // ==========================
+
   app.post("/api/register", async (req, res) => {
     try {
       const { name, email, password } = req.body;
@@ -57,10 +56,7 @@ export default function registerRoutes(
         });
       }
 
-      // Hash Password
       const hashedPassword = await bcrypt.hash(password, 10);
-
-      // User Object
       const newUser: User = {
         name,
         email,
@@ -68,7 +64,6 @@ export default function registerRoutes(
         createdAt: new Date(),
       };
 
-      // Save User
       const result = await usersCollection.insertOne(newUser);
 
       // Success Response
@@ -89,9 +84,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // User Login
-  // ==========================
+
   app.post("/api/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -149,9 +143,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // Add Plant
-  // ==========================
+
   app.post("/api/plants", verifyJWT, async (req: AuthRequest, res) => {
     try {
       const {
@@ -210,9 +203,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // Get My Plants
-  // ==========================
+
   app.get("/api/my-plants", verifyJWT, async (req: AuthRequest, res) => {
     try {
       const plants = await plantsCollection
@@ -238,9 +230,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // Get All Plants (With Pagination)
-  // ==========================
+
   app.get("/api/plants", async (req, res) => {
     try {
       const {
@@ -315,9 +306,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
-  // Public endpoint to get a single plant by ID (no authentication required)
-  // ==========================
+  // Public endpoint to get a single plant by ID
+
   app.get("/api/public/plants/:id", async (req, res) => {
     try {
       const id = req.params.id as string;
@@ -357,9 +347,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // GET Single Plant (For Pre-filling the Edit Form)
-  // ==========================
+
   app.get("/api/plants/:id", verifyJWT, async (req: AuthRequest, res) => {
     try {
       const id = req.params.id as string;
@@ -395,9 +384,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // PATCH Update Plant
-  // ==========================
+
   app.patch("/api/plants/:id", verifyJWT, async (req: AuthRequest, res) => {
     try {
       const id = req.params.id as string;
@@ -438,9 +426,8 @@ export default function registerRoutes(
     }
   });
 
-  // ==========================
   // Delete Plant
-  // ==========================
+
   app.delete("/api/plants/:id", verifyJWT, async (req: AuthRequest, res) => {
     try {
       const id = req.params.id as string;
