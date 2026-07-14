@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import validator from "validator";
 import { createToken } from "./auth";
 import { verifyJWT, AuthRequest } from "./middleware";
+import { ObjectId } from "mongodb";
 
 import { Plant, User } from "./types";
 
@@ -201,6 +202,153 @@ app.post("/api/plants",verifyJWT, async (req: AuthRequest, res) => {
         success: true,
         message: "Plant added successfully.",
         insertedId: result.insertedId,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+);
+
+// ==========================
+// Get My Plants
+// ==========================
+app.get("/api/my-plants", verifyJWT, async (req: AuthRequest, res) => {
+    try {
+      const plants = await plantsCollection
+        .find({
+          sellerEmail: req.user!.email,
+        })
+        .sort({
+          createdAt: -1,
+        })
+        .toArray();
+
+      res.status(200).json({
+        success: true,
+        data: plants,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+      });
+    }
+  }
+);
+
+// ==========================
+  // GET Single Plant (For Pre-filling the Edit Form)
+  // ==========================
+  app.get("/api/plants/:id", verifyJWT, async (req: AuthRequest, res) => {
+    try {
+      const id = req.params.id as string;
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid plant id.",
+        });
+      }
+
+      const plant = await plantsCollection.findOne({
+        _id: new ObjectId(id),
+        sellerEmail: req.user!.email,
+      });
+
+      if (!plant) {
+        return res.status(404).json({
+          success: false,
+          message: "Plant not found.",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: plant,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+  });
+
+  // ==========================
+  // PATCH Update Plant
+  // ==========================
+  app.patch("/api/plants/:id", verifyJWT, async (req: AuthRequest, res) => {
+    try {
+      const id = req.params.id as string;
+      const updates = req.body;
+
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid plant id.",
+        });
+      }
+
+      // Format any numerical updates cleanly if passed
+      if (updates.price !== undefined) updates.price = Number(updates.price);
+      if (updates.stock !== undefined) updates.stock = Number(updates.stock);
+
+      const result = await plantsCollection.updateOne(
+        { _id: new ObjectId(id), sellerEmail: req.user!.email },
+        { $set: updates }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Plant not found or unauthorized.",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Plant updated successfully.",
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+  });
+
+// ==========================
+// Delete Plant
+// ==========================
+app.delete("/api/plants/:id", verifyJWT, async (req: AuthRequest, res) => {
+    try {
+      const id = req.params.id as string;
+
+    if (!ObjectId.isValid(id)) {
+    return res.status(400).json({
+    success: false,
+    message: "Invalid plant id.",
+    });
+    }
+
+  const result = await plantsCollection.deleteOne({
+  _id: new ObjectId(id),
+  sellerEmail: req.user!.email,
+  });
+
+      if (result.deletedCount === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Plant not found.",
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        message: "Plant deleted successfully.",
       });
     } catch (error) {
       console.error(error);
