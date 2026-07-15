@@ -22,7 +22,7 @@ export default function registerRoutes(
 
   app.post("/api/register", async (req, res) => {
     try {
-      const { name, email, password } = req.body;
+      const { name, email, password, role } = req.body;
 
       // Validation
       if (!name || !email || !password) {
@@ -46,6 +46,20 @@ export default function registerRoutes(
         });
       }
 
+      if (!role) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a role.",
+        });
+      }
+
+      if (!["user", "admin"].includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid role.",
+        });
+      }
+
       // Check existing user
       const existingUser = await usersCollection.findOne({ email });
 
@@ -61,6 +75,9 @@ export default function registerRoutes(
         name,
         email,
         password: hashedPassword,
+
+        role,
+
         createdAt: new Date(),
       };
 
@@ -121,6 +138,7 @@ export default function registerRoutes(
       // Create JWT
       const token = createToken({
         email: user.email,
+        role: user.role,
       });
 
       // Success Response
@@ -131,6 +149,7 @@ export default function registerRoutes(
         user: {
           name: user.name,
           email: user.email,
+          role: user.role,
         },
       });
     } catch (error) {
